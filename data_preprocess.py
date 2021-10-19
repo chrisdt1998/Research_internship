@@ -6,14 +6,12 @@ from matplotlib import cm
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, r'C:\Users\Gebruiker\Documents\GitHub')
+sys.path.insert(1, '/Volumes/ExtremeSSDChris')
 
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
 def crop_frame(image, mtcnn):
-    # Get cropped and prewhitened image tensor
-    # print(image)
     image = Image.fromarray(np.uint8(image)).convert('RGB')
     img_cropped = mtcnn(image)
 
@@ -25,7 +23,7 @@ def crop_frame(image, mtcnn):
     # pil_image = norm_image.astype(np.uint8)
     # pil_image = Image.fromarray(pil_image, 'RGB')
     # pil_image
-    print("shape shape ==", norm_image.shape)
+    # print("shape shape ==", norm_image.shape)
 
     return norm_image
 
@@ -38,11 +36,11 @@ def video_to_frames(video, number_of_frames):
     # print(vidcap)
     length = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_step = int(length / number_of_frames)
-    print("Total number of frames is", length)
-    print("Number of frames extracted is", number_of_frames)
-    print("Frame step is", frame_step)
+    # print("Total number of frames is", length)
+    # print("Number of frames extracted is", number_of_frames)
+    # print("Frame step is", frame_step)
     success, image = vidcap.read()
-    print(success)
+    # print(success)
     count = 0
     frames = []
     while success:
@@ -61,48 +59,39 @@ def crop_videos(src, dst, number_of_frames=8):
     counter = 0
     for root, dirs, filenames in os.walk(src, topdown=False):
         for filename in filenames:
-            if counter < 5:
-                video = os.path.join(root, filename)
-                # print(video)
-                frames = video_to_frames(video, number_of_frames)
-                # print(frames)
-                if frames is not None:
-                    cropped_frames = []
-                    for frame in frames:
-                        cropped_frames.append(crop_frame(frame, mtcnn))
-                    cropped_frames = np.stack(cropped_frames, axis=0)
-                    print(cropped_frames.shape)
+            video = os.path.join(root, filename)
+            # print(video)
+            frames = video_to_frames(video, number_of_frames)
+            # print(frames)
+            if frames is not None:
+                cropped_frames = []
+                for frame in frames:
+                    cropped_frames.append(crop_frame(frame, mtcnn))
 
-                    ## Probably need to reshape
-                    filename = filename.lower().replace(".flv", "")
-                    # print(filename)
-                    file_location = os.path.join(dst, filename + '.npy')
-                    with open(file_location, 'wb') as f:
-                        print("npy saved at ", file_location)
-                        np.save(f, cropped_frames)
-                        print(cropped_frames.shape)
-                counter += 1
-            else:
-                break
+                cropped_frames = np.stack(cropped_frames, axis=0)
+                filename = filename.lower().replace(".flv", "")
+                file_location = os.path.join(dst, filename + '.npy')
+                with open(file_location, 'wb') as f:
+                    print("npy saved at ", file_location)
+                    np.save(f, cropped_frames)
 
 
 def np_to_img(video_arr, filename):
     # cv2.imwrite("tester.jpg", video_arr[0])
     for i, frame in enumerate(video_arr):
         # cv2.imwrite("jpg_files/image" + str(i) + ".jpg", frame)
-        cv2.imwrite("filename/image" + str(i) + ".jpg", frame)
+        cv2.imwrite("jpg_files/" + "image" + str(i) + "_" + str(filename) + ".jpg", frame)
 
 
-def img_to_video():
-    image_folder = 'jpg_files'
-    video_name = 'tester.avi'
-
-    images = [img for img in os.listdir(image_folder) if img.endswith(".jpg")]
-    print(images)
+def img_to_video(image_folder, video_name, video_path):
+    # image_folder = 'jpg_files'
+    # video_name = 'tester.avi'
+    print(video_name + ".jpg®")
+    images = [img for img in os.listdir(image_folder) if img.endswith(video_name + ".jpg")]
     frame = cv2.imread(os.path.join(image_folder, images[0]))
     height, width, layers = frame.shape
 
-    video = cv2.VideoWriter(video_name, 0, 1, (width, height))
+    video = cv2.VideoWriter(video_path + video_name + ".avi", 0, 1, (width, height))
 
     for image in images:
         video.write(cv2.imread(os.path.join(image_folder, image)))
@@ -110,33 +99,28 @@ def img_to_video():
     cv2.destroyAllWindows()
     video.release()
 
-def np_to_video(src, dst):
+def np_to_video(src):
     counter = 0
     for root, dirs, filenames in os.walk(src, topdown=False):
         for filename in filenames:
-            if counter < 5:
-                with open(filename, 'rb') as r:
-                    video_arr = np.load(r)
-                r.close()
-                filename = filename.lower().replace(".flv", "")
-                file_location = os.path.join(dst, filename + '.npy')
-                np_to_img(video_arr, filename)
-                counter += 1
-            else:
-                break
+            print("opening numpy:", os.path.join(src, filename))
+            with open(os.path.join(src, filename), 'rb') as r:
+                video_arr = np.load(r)
+            r.close()
+            filename = filename.lower().replace(".npy", "")
+            np_to_img(video_arr=video_arr, filename=filename)
+            img_to_video(image_folder="jpg_files", video_name=filename, video_path="avi_videos/")
 
 
-src = r'C:\Users\Gebruiker\Documents\GitHub\CREMA-D\VideoFlash'
+src = '/Volumes/ExtremeSSDChris/CREMA-D/VideoFlash'
 dst = 'numpy_videos'
 
-# crop_videos(src, dst, 8)
+crop_videos(src, dst, 8)
 
-with open("numpy_videos/1001_dfa_ang_xx.npy", 'rb') as r:
-    a = np.load(r)
-r.close()
+src = "numpy_videos"
+dst = 'avi_videos/'
 
-# np_to_img(a)
-img_to_video()
+np_to_video(src)
 
 
 
