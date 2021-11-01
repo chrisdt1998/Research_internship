@@ -3,27 +3,36 @@ import numpy as np
 import os
 from PIL import Image
 from matplotlib import cm
+from tqdm import tqdm
+
 
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, '/Volumes/ExtremeSSDChris')
+# sys.path.insert(1, '/Volumes/ExtremeSSDChris')
+sys.path.insert(1, r'C:\Users\Gebruiker\Documents\GitHub')
 
 from facenet_pytorch import MTCNN, InceptionResnetV1
+
+failed_videos = []
+
+def check_file_exists(filename, folder, file_ending, target_file_ending):
+    filename = filename.replace(target_file_ending, file_ending)
+    filepath = os.path.join(folder, filename)
+    return os.path.isfile(filepath)
 
 
 def crop_frame(image, mtcnn):
     image = Image.fromarray(np.uint8(image)).convert('RGB')
     img_cropped = mtcnn(image)
-
+    if img_cropped is None:
+        return None
     img_arr = img_cropped.numpy()
-    # print(np.rollaxis(img_arr, 0, 3).shape)
     # img_arr = np.rollaxis(img_arr,0,3)
     img_arr = np.transpose(img_arr, (1, 2, 0))
     norm_image = cv2.normalize(img_arr, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     # pil_image = norm_image.astype(np.uint8)
     # pil_image = Image.fromarray(pil_image, 'RGB')
     # pil_image
-    # print("shape shape ==", norm_image.shape)
 
     return norm_image
 
@@ -56,37 +65,51 @@ def crop_videos(src, dst, number_of_frames=8):
     # If required, create a face detection pipeline using MTCNN:
     image_size = 224
     mtcnn = MTCNN(image_size=image_size, margin=0)
-    counter = 0
     for root, dirs, filenames in os.walk(src, topdown=False):
-        for filename in filenames:
-            video = os.path.join(root, filename)
-            # print(video)
-            frames = video_to_frames(video, number_of_frames)
-            # print(frames)
-            if frames is not None:
-                cropped_frames = []
-                for frame in frames:
-                    cropped_frames.append(crop_frame(frame, mtcnn))
+        for filename in tqdm(filenames):
+            if check_file_exists(filename, folder="numpy_videos", file_ending=".npy", target_file_ending=".mp4") is False:
+                print("flv opened: ", filename)
+                video = os.path.join(root, filename)
+                # print(video)
+                frames = video_to_frames(video, number_of_frames)
+                # print(frames)
+                if frames is not None:
+                    cropped_frames = []
+                    cropped_frame = []
+                    use_next_frame = False
+                    for frame in frames:
+                        previous_frame = cropped_frame
+                        cropped_frame = crop_frame(frame, mtcnn)
+                        if cropped_frame is None:
+                            if previous_frame is None or len(previous_frame) == 0:
+                                use_next_frame = True
+                            else:
+                                cropped_frames.append(previous_frame)
+                                failed_videos.append(filename)
+                        else:
+                            if use_next_frame:
+                                use_next_frame = False
+                                cropped_frames.append(cropped_frame)
+                            cropped_frames.append(cropped_frame)
 
-                cropped_frames = np.stack(cropped_frames, axis=0)
-                filename = filename.lower().replace(".flv", "")
-                file_location = os.path.join(dst, filename + '.npy')
-                with open(file_location, 'wb') as f:
-                    print("npy saved at ", file_location)
-                    np.save(f, cropped_frames)
+                    cropped_frames = np.stack(cropped_frames, axis=0)
+                    filename = filename.replace(".mp4", "")
+                    file_location = os.path.join(dst, filename + '.npy')
+                    with open(file_location, 'wb') as f:
+                        # print("npy saved at ", file_location)
+                        np.save(f, cropped_frames)
 
 
 def np_to_img(video_arr, filename):
     # cv2.imwrite("tester.jpg", video_arr[0])
     for i, frame in enumerate(video_arr):
         # cv2.imwrite("jpg_files/image" + str(i) + ".jpg", frame)
-        cv2.imwrite("jpg_files/" + "image" + str(i) + "_" + str(filename) + ".jpg", frame)
+        cv2.imwrite("jpg_custom/" + "image" + str(i) + "_" + str(filename) + ".jpg", frame)
 
 
 def img_to_video(image_folder, video_name, video_path):
     # image_folder = 'jpg_files'
     # video_name = 'tester.avi'
-    print(video_name + ".jpg®")
     images = [img for img in os.listdir(image_folder) if img.endswith(video_name + ".jpg")]
     frame = cv2.imread(os.path.join(image_folder, images[0]))
     height, width, layers = frame.shape
@@ -100,27 +123,60 @@ def img_to_video(image_folder, video_name, video_path):
     video.release()
 
 def np_to_video(src):
-    counter = 0
     for root, dirs, filenames in os.walk(src, topdown=False):
-        for filename in filenames:
-            print("opening numpy:", os.path.join(src, filename))
-            with open(os.path.join(src, filename), 'rb') as r:
-                video_arr = np.load(r)
-            r.close()
-            filename = filename.lower().replace(".npy", "")
-            np_to_img(video_arr=video_arr, filename=filename)
-            img_to_video(image_folder="jpg_files", video_name=filename, video_path="avi_videos/")
+        for filename in tqdm(filenames):
+            if check_file_exists(filename, folder="avi_videos", file_ending=".avi", target_file_ending=".npy") is False:
+                print("opening numpy:", os.path.join(src, filename))
+                with open(os.path.join(src, filename), 'rb') as r:
+                    video_arr = np.load(r)
+                r.close()
+                filename = filename.lower().replace(".npy", "")
+                np_to_img(video_arr=video_arr, filename=filename)
+                img_to_video(image_folder="jpg_custom", video_name=filename, video_path="avi_custom/")
 
 
-src = '/Volumes/ExtremeSSDChris/CREMA-D/VideoFlash'
-dst = 'numpy_videos'
+def test_video(filename, number_of_frames):
+    image_size = 224
+    mtcnn = MTCNN(image_size=image_size, margin=0)
+    print("flv opened: ", filename)
+    video = filename
+    # print(video)
+    frames = video_to_frames(video, number_of_frames)
+    # print(frames)
+    if frames is not None:
+        cropped_frames = []
+        cropped_frame = []
+        for frame in frames:
+            previous_frame = cropped_frame
+            cropped_frame = crop_frame(frame, mtcnn)
+            if cropped_frame is None:
+                cropped_frames.append(previous_frame)
+                failed_videos.append(filename)
+            else:
+                cropped_frames.append(cropped_frame)
 
-crop_videos(src, dst, 8)
+        cropped_frames = np.stack(cropped_frames, axis=0)
+        print(cropped_frames)
+        print(cropped_frames.shape)
 
-src = "numpy_videos"
-dst = 'avi_videos/'
+
+
+# test_video("1032_IWL_DIS_XX.flv", 8)
+# print(failed_videos)
+
+
+# src = '/Volumes/ExtremeSSDChris/CREMA-D/VideoFlash'
+# src = r'C:\Users\Gebruiker\Documents\GitHub\Research_internship\custom'
+# dst = 'np_custom'
+#
+# crop_videos(src, dst, 8)
+# exit(1)
+
+src = "np_custom"
+dst = 'avi_custom/'
 
 np_to_video(src)
 
+exit(1)
 
 
