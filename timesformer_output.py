@@ -50,7 +50,6 @@ def timesformer_pred(filename, load_numpy=True):
     video_torch = torch.index_select(video_torch, 1, torch.linspace(0, video_torch.shape[1] - 1, 8).long(), )
     video_torch = video_torch.unsqueeze(0)
     pred = model(video_torch,)
-    print(pred)
     print_top_classes(pred)
     return video_torch
 
@@ -58,9 +57,7 @@ def timesformer_pred(filename, load_numpy=True):
 def print_top_classes(predictions, **kwargs):
     # Print Top-5 predictions
     prob = torch.softmax(predictions, dim=1)
-    print("prob ", prob)
     class_indices = predictions.data.topk(5, dim=1)[1][0].tolist()
-    print("LOLOL", class_indices)
     max_str_len = 0
     class_names = []
     for cls_idx in class_indices:
@@ -109,15 +106,52 @@ total_correct = topks_correct(x[0], x[1], [1])
 
 
 model = TimeSformer(img_size=224, num_classes=6, num_frames=8, attention_type='divided_space_time',  pretrained_model=r'C:\Users\Gebruiker\Documents\GitHub\TimeSformer\checkpoints\checkpoint_epoch_00015.pyth')
+model.train()
 labels = {0: 'happy', 1: 'sad', 2: 'anger', 3: 'fear', 4: 'disgust', 5: 'neutral'}
 
-# filename = os.path.join('avi_videos', '1025_MTI_HAP_XX.avi')
-# true_label = 0
-#
-# timesformer_pred(filename, load_numpy=False)
-# print("True label is", labels[true_label])
-# print(x[0][258], x[1][258])
+filename = os.path.join('avi_videos', '1025_MTI_HAP_XX.avi')
+true_label = 0
 
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][258], x[1][258])
+
+filename = os.path.join('avi_videos', '1003_TAI_SAD_XX.avi')
+true_label = 1
+
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][259], x[1][259])
+
+filename = os.path.join('avi_videos', '1052_TIE_ANG_XX.avi')
+true_label = 2
+
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][32], x[1][32])
+
+filename = os.path.join('avi_videos', '1045_TSI_FEA_XX.avi')
+true_label = 3
+
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][75], x[1][75])
+
+filename = os.path.join('avi_videos', '1014_TSI_DIS_XX.avi')
+true_label = 4
+
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][307], x[1][307])
+
+filename = os.path.join('avi_videos', '1014_IWW_NEU_XX.avi')
+true_label = 5
+
+timesformer_pred(filename, load_numpy=False)
+print("True label is", labels[true_label])
+print(x[0][269], x[1][269])
+
+exit(1)
 
 filename = os.path.join('avi_custom', 'happy.avi')
 true_label = 0
@@ -131,14 +165,3 @@ true_label = 1
 
 timesformer_pred(filename, load_numpy=False)
 print("True label is", labels[true_label])
-
-
-
-exit(1)
-
-filename = os.path.join('avi_videos', '1003_TAI_SAD_XX.avi')
-true_label = 1
-
-timesformer_pred(filename, load_numpy=False)
-print("True label is", labels[true_label])
-print(x[0][259], x[1][259])
