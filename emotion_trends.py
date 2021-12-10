@@ -1,6 +1,6 @@
 import math
 
-import matplotlib; matplotlib.use("TkAgg")
+
 import pickle
 import numpy as np
 from collections import defaultdict
@@ -11,8 +11,9 @@ import scipy.stats as stats
 
 
 class Trends:
-    def __init__(self, data='Correct'):
-        if data == 'Correct':
+    def __init__(self, visual_type='TIBAV', data_type='correct'):
+        self.visual_type = visual_type
+        if data_type == 'correct':
             output, labels = self.extract_correct_predictions()
         else:
             output, labels = self.extract_wrong_predictions()
@@ -20,20 +21,19 @@ class Trends:
         self.labels = {0: 'happy', 1: 'sad', 2: 'anger', 3: 'fear', 4: 'disgust', 5: 'neutral'}
 
     def extract_correct_predictions(self):
-        with open("CREMA_D/Pickle dump/correct_output", "rb") as f:
+        with open("CREMA_D/Pickle dump/" + self.visual_type + "/correct_output", "rb") as f:
             correct_output = pickle.load(f)
 
-        with open("CREMA_D/Pickle dump/correct_labels", "rb") as f:
+        with open("CREMA_D/Pickle dump/" + self.visual_type + "/correct_labels", "rb") as f:
             correct_labels = pickle.load(f)
 
         return correct_output, correct_labels
 
-
     def extract_wrong_predictions(self):
-        with open("CREMA_D/Pickle dump/wrong_output", "rb") as f:
+        with open("CREMA_D/Pickle dump/" + self.visual_type + "/wrong_output", "rb") as f:
             wrong_output = pickle.load(f)
 
-        with open("CREMA_D/Pickle dump/wrong_labels", "rb") as f:
+        with open("CREMA_D/Pickle dump/" + self.visual_type + "/wrong_labels", "rb") as f:
             wrong_labels = pickle.load(f)
 
         return wrong_output, wrong_labels
@@ -122,7 +122,7 @@ class Trends:
                     frame = self.reduce_array(frame).reshape(49)
                     plt.plot(range(49), frame, label=str(i))
                 else:
-                    frame = np.mean(frame.reshape((14,14)), axis=0)
+                    frame = np.mean(frame.reshape((14,14)), axis=1)
                     plt.plot(range(14), frame, label=str(i))
             plt.title(self.labels[emotion])
             plt.legend()
@@ -134,11 +134,11 @@ class Trends:
             average = np.mean(np.stack(self.emotion_dict[emotion]), axis=0)
             fig, ax = plt.subplots()
             ax.set_xlim(0, 14)
-            ax.set_ylim(0, 0.001)
-            line, = ax.plot(range(14), np.mean(average[0].reshape((14,14)), axis=0))
+            ax.set_ylim(0, 0.0015)
+            line, = ax.plot(range(14), np.mean(average[0].reshape((14,14)), axis=1))
             plt.title(self.labels[emotion] + ' ' + str(1))
             def animate_frame(i):
-                y_data = np.mean(average[i].reshape((14,14)), axis=0)
+                y_data = np.mean(average[i].reshape((14,14)), axis=1)
                 line.set_ydata(y_data)
                 line.set_xdata(range(14))
                 plt.title(self.labels[emotion] + ' ' + str(i+1))
@@ -212,6 +212,10 @@ class Trends:
         plt.show()
 
 
+if __name__ == '__main__':
+    import matplotlib; matplotlib.use("TkAgg")
+    compute_trends = Trends()
+    # compute_trends.average_heatmap()
+    compute_trends.most_attn_frame()
 
-compute_trends = Trends()
-compute_trends.row_line_anim()
+
