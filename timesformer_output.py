@@ -1,3 +1,9 @@
+"""
+This file contains sample outputs of the TimeSformer model for each of the 6 different emotions.
+
+This code was written and designed by Christopher du Toit.
+"""
+
 import torch
 from timesformer.models.vit import TimeSformer
 from timesformer.datasets.decoder import decode
@@ -19,20 +25,16 @@ def load_video(filename):
     return video_container
 
 def tensor_normalize(tensor, mean, std):
-    """
-    Normalize a given tensor by subtracting the mean and dividing the std.
-    Args:
-        tensor (tensor): tensor to normalize.
-        mean (tensor or list): mean value to subtract.
-        std (tensor or list): std to divide.
-    """
     if tensor.dtype == torch.uint8:
         tensor = tensor.float()
         tensor = tensor / 255.0
+
     if type(mean) == list:
         mean = torch.tensor(mean)
+
     if type(std) == list:
         std = torch.tensor(std)
+
     tensor = tensor - mean
     tensor = tensor / std
     return tensor
@@ -73,21 +75,12 @@ def print_top_classes(predictions, **kwargs):
         print(output_string)
 
 def topks_correct(preds, labels, ks):
-    # Find the top max_k predictions for each sample
     _top_max_k_vals, top_max_k_inds = torch.topk(
         preds, max(ks), dim=1, largest=True, sorted=True
     )
-    # (batch_size, max_k) -> (max_k, batch_size).
     top_max_k_inds = top_max_k_inds.t()
-    # print(preds)
-    # print(top_max_k_inds)
-    # (batch_size, ) -> (max_k, batch_size).
     rep_max_k_labels = labels.view(1, -1).expand_as(top_max_k_inds)
-    # print(rep_max_k_labels)
-    # (i, j) = 1 if top i-th prediction for the j-th sample is correct.
     top_max_k_correct = top_max_k_inds.eq(rep_max_k_labels)
-    # print(top_max_k_correct[0][258], top_max_k_correct[0][259])
-    # Compute the number of topk correct predictions for each k.
     topks_correct = [top_max_k_correct[:k, :].float().sum() for k in ks]
     return topks_correct
 
@@ -96,13 +89,7 @@ with open(r"C:\Users\Gebruiker\Documents\GitHub\TimeSformer\Results\results_outp
     x = pickle.load(f)
 
 f.close()
-# print(x)
-# print(x[0].shape, x[1].shape)
-# print(x[0][258], x[1][258])
-
 total_correct = topks_correct(x[0], x[1], [1])
-# print(total_correct)
-# print(total_correct[0]/x[1].shape[0] * 100)
 
 
 model = TimeSformer(img_size=224, num_classes=6, num_frames=8, attention_type='divided_space_time',  pretrained_model=r'C:\Users\Gebruiker\Documents\GitHub\TimeSformer\checkpoints\checkpoint_epoch_00015.pyth')
